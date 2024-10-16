@@ -24,6 +24,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
+import { cleanDiagnosticsFile, getDiagnostics } from "./diagnostics";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -141,12 +142,6 @@ function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
   return result;
 }
 
-/** Clears out diagnostic files */
-async function cleanDiagnosticsFile(textDocument: TextDocument) {
-  const file = `${unuri(textDocument.uri)}-diagnostics`;
-  await fs.promises.unlink(file);
-}
-
 // Only keep settings for open documents
 documents.onDidClose((e) => {
   cleanDiagnosticsFile(e.document);
@@ -177,92 +172,13 @@ documents.onDidChangeContent((change) => {
   validateTextDocument(change.document);
 });
 
-/**
- * Turns a uri into a local file path
- */
-const unuri = (uri: string) => uri.replace("file:///", "").replace("%3A", ":");
-
-/** Run Cppfront on the specified text document
- *
- * (This will be the one referenced by `validateTextDocument`)
- */
-async function runCppfront(
-  cppfrontPath: string,
-  textDocument: TextDocument
-): Promise<{ stdout: string; stderr: string }> {
-  // Make exec awaitable
-  const awaitExec = promisify(exec);
-
-  // This might not be right, but for now, we remove the weird uri stuff and make it
-  // back into a local file style reference. Otherwise, cppfront fails to read the file
-  const uri = unuri(textDocument.uri);
-
-  // Finally, we run the file through cppfront and get back the result in stdout and stderr
-  try {
-    const { stdout, stderr } = await awaitExec(
-      `${cppfrontPath} ${uri} -di -o stdout`
-    );
-    return { stdout, stderr };
-  } catch (err: any) {
-    return { stdout: "", stderr: err.toString() };
-  }
-}
-
-async function readDiagnostics(textDocument: TextDocument) {
-  const file = `${unuri(textDocument.uri)}-diagnostics`;
-
-  const text = await fs.promises.readFile(file);
-  return text.toString();
-}
-
-type CppfrontError = {
-  file: string;
-  lineno: number;
-  colno: number;
-  msg: string;
-  symbol: string;
-};
-
-type CppfrontSymbol = {
-  symbol: string;
-  kind: string;
-  scope: string[];
-  lineno: number;
-  colno: number;
-};
-
-type CppfrontResult = {
-  symbols: CppfrontSymbol[];
-  errors: CppfrontError[];
-};
-
-function tryParseDiagnostics(s: string): CppfrontResult | null {
-  try {
-    return JSON.parse(s);
-  } catch (err) {
-    console.log("Error parsing json", s, err);
-    return { errors: [], symbols: [] };
-  }
-}
-
-function parseCppfrontErrors(errors: string): CppfrontResult {
-  const fixedErrors = errors.replace(/,\]/g, "]");
-  const json = tryParseDiagnostics(fixedErrors);
-
-  console.log(json);
-  return json ?? { errors: [], symbols: [] };
-}
-
 async function validateTextDocument(
   textDocument: TextDocument
 ): Promise<Diagnostic[]> {
   // In this simple example we get the settings for every validate run.
   const settings = await getDocumentSettings(textDocument.uri);
 
-  await runCppfront(settings.cppfrontPath, textDocument);
-  const stdout = await readDiagnostics(textDocument);
-
-  const result = parseCppfrontErrors(stdout);
+  const result = await getDiagnostics(settings.cppfrontPath, textDocument);
   const diagnostics: Diagnostic[] = [];
 
   for (const e of result.errors) {
