@@ -1,3 +1,25 @@
+# LS-Cpp2
+
+This is a proof-of-concept language server for [cpp2]. We may end up writing the language server in
+a different language, but since I've never done this before, starting here is the easiest way to
+begin.
+
+This language server relies on my personal cppfront branch which you can find at
+https://github.com/vanceism7/cppfront (although hopefully I can get the changes merged upstream
+quickly if they're useful)
+
+[cpp2]: https://hsutter.github.io/cppfront/
+
+## Features
+
+Currently this language server can report:
+
+- Error Diagnostics
+
+## Other notes:
+
+I left the original readme from the tutorial below, since a lot of it is still relevant
+
 # LSP Example
 
 Heavily documented sample code for https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
@@ -5,6 +27,7 @@ Heavily documented sample code for https://code.visualstudio.com/api/language-ex
 ## Functionality
 
 This Language Server works for plain text file. It has the following language features:
+
 - Completions
 - Diagnostics regenerated on each file change or configuration change
 
