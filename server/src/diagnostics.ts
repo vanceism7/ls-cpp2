@@ -139,8 +139,10 @@ export function getInScopeSymbols(
     .filter((s) => inScope(position, s[1]))
     .map((o) => o[0]);
 
-  // Filter our total set of symbols to grab only those in scope
-  return diagnostics.symbols.filter((s) => scopes.includes(s.scope));
+  // Filter our total set of symbols to grab only those in scope + globals
+  return diagnostics.symbols.filter(
+    (s) => scopes.includes(s.scope) || s.scope == ""
+  );
 }
 
 /** Check if the `pos` is in the scope of some `SourceRange` */
