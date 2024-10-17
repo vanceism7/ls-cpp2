@@ -28,7 +28,8 @@ import {
   cleanDiagnosticsFile,
   genDiagnostics,
   getDiagnostics,
-  inScope,
+  getInScopeSymbols,
+  getSymbolKind,
 } from "./diagnostics";
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -173,7 +174,6 @@ connection.languages.diagnostics.on(async (params) => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent((change) => {
-  console.log("Change detected in: ", change.document.uri);
   validateTextDocument(change.document);
 });
 
@@ -215,27 +215,14 @@ connection.onDidChangeWatchedFiles((_change) => {
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
   async (pos: TextDocumentPositionParams): Promise<CompletionItem[]> => {
-    // The pass parameter contains the position of the text document in
-    // which code complete got requested. For the example we ignore this
-    // info and always provide the same completion items.
+    //
     const diagnostics = await getDiagnostics(pos.textDocument.uri);
 
-    const scopes = Object.entries(diagnostics.scopes)
-      .filter((s) => inScope(pos.position, s[1]))
-      .map((o) => o[0]);
-
-    const decls = diagnostics.symbols.filter((s) =>
-      scopes.includes(s.scope[0])
-    );
-
-    const completions: CompletionItem[] = decls.map((d) => ({
+    // Get our in-scope symbols and transform them into a CompletionItem list
+    return getInScopeSymbols(diagnostics, pos.position).map((d) => ({
       label: d.symbol,
-      kind: CompletionItemKind.Text,
+      kind: getSymbolKind(d),
     }));
-
-    console.log("completions found", completions);
-
-    return completions;
   }
 );
 

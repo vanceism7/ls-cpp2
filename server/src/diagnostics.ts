@@ -5,6 +5,7 @@
 import * as fs from "fs";
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import { awaitExec, unuri } from "./util";
+import { CompletionItemKind } from "vscode-languageserver";
 
 /** The main container of diagnostics results from cppfront compilation */
 type CppfrontResult = {
@@ -16,8 +17,8 @@ type CppfrontResult = {
 /** The symbols declared in a cppfront diagnostics file */
 type CppfrontSymbol = {
   symbol: string;
-  kind: string;
-  scope: string[];
+  kind: "function" | "var" | "type" | "namespace";
+  scope: string;
   lineno: number;
   colno: number;
 };
@@ -25,29 +26,30 @@ type CppfrontSymbol = {
 /** The error information from a cppfront diagnostics file */
 type CppfrontError = {
   file: string;
-  lineno: number;
-  colno: number;
   msg: string;
   symbol: string;
-};
+} & SourcePos;
 
+/** Some position in the source code */
 type SourcePos = {
   lineno: number;
   colno: number;
 };
 
+/** A range in the source code */
 type SourceRange = {
   start: SourcePos;
   end: SourcePos;
 };
 
+/** A mapping of scopes to their source ranges */
 type CppfrontScopes = {
   [key: string]: SourceRange;
 };
 
-//----------------//
-// Main Functions //
-//----------------//
+//-----------------//
+// Gen Diagnostics //
+//-----------------//
 
 /** The main function to read diagnostics from the cppfront diagnostics file */
 export async function genDiagnostics(
@@ -121,13 +123,61 @@ function tryParseDiagnostics(s: string): CppfrontResult {
   }
 }
 
-export function inScope(pos: Position, scope: SourceRange) {
-  console.log(pos, scope);
+//----------------------------//
+// Query Diagnostics for info //
+//----------------------------//
+
+/**
+ * Query our diagnostics info for which scopes we have access to at `position`
+ */
+export function getInScopeSymbols(
+  diagnostics: CppfrontResult,
+  position: Position
+) {
+  // Grab all relevant scopes that our cursor position is in
+  const scopes = Object.entries(diagnostics.scopes)
+    .filter((s) => inScope(position, s[1]))
+    .map((o) => o[0]);
+
+  // Filter our total set of symbols to grab only those in scope
+  return diagnostics.symbols.filter((s) => scopes.includes(s.scope));
+}
+
+/** Check if the `pos` is in the scope of some `SourceRange` */
+function inScope(pos: Position, scope: SourceRange): boolean {
+  //
+  // Seems like the language server's line variable is 0 based, so we need to add 1 to it to
+  // get the correct line
+  const line = pos.line + 1;
+
   return (
-    pos.line > scope.start.lineno && pos.line <= scope.end.lineno
-    // pos.character >= scope.start.colno &&
-    // pos.character <= scope.end.colno
+    //
+    // If we're between the lines where the scope is defined, we're "in scope".
+    (line > scope.start.lineno && line < scope.end.lineno) ||
+    //
+    // Otherwise, if we're on the line where the scope starts or ends, we need to check
+    // that the character we're on is within the scope.
+    (line == scope.start.lineno && pos.character >= scope.start.colno) ||
+    (line == scope.end.lineno && pos.character <= scope.end.colno)
   );
+}
+
+/**
+ * Translates from cppfront's symbol classification to the language server's classification
+ */
+export function getSymbolKind(symbol: CppfrontSymbol): CompletionItemKind {
+  switch (symbol.kind) {
+    case "function":
+      return CompletionItemKind.Function;
+    case "var":
+      return CompletionItemKind.Variable;
+    case "namespace":
+      return CompletionItemKind.Module;
+    case "type":
+      return CompletionItemKind.TypeParameter;
+    default:
+      return CompletionItemKind.Text;
+  }
 }
 
 //
