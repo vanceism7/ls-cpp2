@@ -24,7 +24,12 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
-import { cleanDiagnosticsFile, getDiagnostics } from "./diagnostics";
+import {
+  cleanDiagnosticsFile,
+  genDiagnostics,
+  getDiagnostics,
+  inScope,
+} from "./diagnostics";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -178,7 +183,7 @@ async function validateTextDocument(
   // In this simple example we get the settings for every validate run.
   const settings = await getDocumentSettings(textDocument.uri);
 
-  const result = await getDiagnostics(settings.cppfrontPath, textDocument);
+  const result = await genDiagnostics(settings.cppfrontPath, textDocument.uri);
   const diagnostics: Diagnostic[] = [];
 
   for (const e of result.errors) {
@@ -209,22 +214,28 @@ connection.onDidChangeWatchedFiles((_change) => {
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
-  (_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+  async (pos: TextDocumentPositionParams): Promise<CompletionItem[]> => {
     // The pass parameter contains the position of the text document in
     // which code complete got requested. For the example we ignore this
     // info and always provide the same completion items.
-    return [
-      {
-        label: "TypeScript",
-        kind: CompletionItemKind.Text,
-        data: 1,
-      },
-      {
-        label: "JavaScript",
-        kind: CompletionItemKind.Text,
-        data: 2,
-      },
-    ];
+    const diagnostics = await getDiagnostics(pos.textDocument.uri);
+
+    const scopes = Object.entries(diagnostics.scopes)
+      .filter((s) => inScope(pos.position, s[1]))
+      .map((o) => o[0]);
+
+    const decls = diagnostics.symbols.filter((s) =>
+      scopes.includes(s.scope[0])
+    );
+
+    const completions: CompletionItem[] = decls.map((d) => ({
+      label: d.symbol,
+      kind: CompletionItemKind.Text,
+    }));
+
+    console.log("completions found", completions);
+
+    return completions;
   }
 );
 

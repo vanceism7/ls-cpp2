@@ -3,13 +3,14 @@
 //------------------//
 
 import * as fs from "fs";
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import { awaitExec, unuri } from "./util";
 
 /** The main container of diagnostics results from cppfront compilation */
 type CppfrontResult = {
   symbols: CppfrontSymbol[];
   errors: CppfrontError[];
+  scopes: CppfrontScopes;
 };
 
 /** The symbols declared in a cppfront diagnostics file */
@@ -30,18 +31,40 @@ type CppfrontError = {
   symbol: string;
 };
 
+type SourcePos = {
+  lineno: number;
+  colno: number;
+};
+
+type SourceRange = {
+  start: SourcePos;
+  end: SourcePos;
+};
+
+type CppfrontScopes = {
+  [key: string]: SourceRange;
+};
+
 //----------------//
 // Main Functions //
 //----------------//
 
 /** The main function to read diagnostics from the cppfront diagnostics file */
-export async function getDiagnostics(
+export async function genDiagnostics(
   cppfrontPath: string,
-  document: TextDocument
+  documentUri: string
 ) {
-  await runCppfront(cppfrontPath, document);
-  const text = await readDiagnostics(document);
+  // This might not be right, but for now, we remove the weird uri stuff and make it
+  // back into a local file style reference. Otherwise, cppfront fails to read the file
+  const sourceFile = unuri(documentUri);
 
+  await runCppfront(cppfrontPath, sourceFile);
+  return getDiagnostics(documentUri);
+}
+
+export async function getDiagnostics(uri: string) {
+  const sourceFile = unuri(uri);
+  const text = await readDiagnostics(sourceFile);
   return parseCppfrontDiagnostics(text);
 }
 
@@ -51,16 +74,12 @@ export async function getDiagnostics(
  */
 async function runCppfront(
   cppfrontPath: string,
-  textDocument: TextDocument
+  sourceFile: string
 ): Promise<{ stdout: string; stderr: string }> {
-  // This might not be right, but for now, we remove the weird uri stuff and make it
-  // back into a local file style reference. Otherwise, cppfront fails to read the file
-  const uri = unuri(textDocument.uri);
-
   // Finally, we run the file through cppfront. Diagnostics are written to file on disk
   try {
     const { stdout, stderr } = await awaitExec(
-      `${cppfrontPath} ${uri} -di -o stdout`
+      `${cppfrontPath} ${sourceFile} -di -o stdout`
     );
     return { stdout, stderr };
   } catch (err: any) {
@@ -72,8 +91,8 @@ async function runCppfront(
  * Read the diagnostics file, which is a slightly-ill-formatted json string
  * (to be fixed in cppfront later)
  */
-async function readDiagnostics(textDocument: TextDocument) {
-  const file = `${unuri(textDocument.uri)}-diagnostics`;
+async function readDiagnostics(sourceFile: string) {
+  const file = `${sourceFile}-diagnostics`;
 
   const text = await fs.promises.readFile(file);
   return text.toString();
@@ -85,21 +104,30 @@ async function readDiagnostics(textDocument: TextDocument) {
  * which is my own fault)
  */
 function parseCppfrontDiagnostics(text: string): CppfrontResult {
-  const fixedText = text.replace(/,\]/g, "]");
+  const fixedText = text.replace(/,\]/g, "]").replace(/,}/g, "}");
   const json = tryParseDiagnostics(fixedText);
 
-  console.log(json);
-  return json ?? { errors: [], symbols: [] };
+  // console.log(json);
+  return json;
 }
 
 /** Tries to parse the json or returns an empty CppFrontResult */
-function tryParseDiagnostics(s: string): CppfrontResult | null {
+function tryParseDiagnostics(s: string): CppfrontResult {
   try {
     return JSON.parse(s);
   } catch (err) {
     console.log("Error parsing json", s, err);
-    return { errors: [], symbols: [] };
+    return { errors: [], symbols: [], scopes: {} };
   }
+}
+
+export function inScope(pos: Position, scope: SourceRange) {
+  console.log(pos, scope);
+  return (
+    pos.line > scope.start.lineno && pos.line <= scope.end.lineno
+    // pos.character >= scope.start.colno &&
+    // pos.character <= scope.end.colno
+  );
 }
 
 //
