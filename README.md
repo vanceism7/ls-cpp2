@@ -15,6 +15,55 @@ quickly if they're useful)
 Currently this language server can report:
 
 - Error Diagnostics
+- Auto Completion (somewhat, it's a little clunky still)
+- Go to Definition
+
+## Contributing
+
+I haven't given this much thought yet, but here's probably what you need to do...:
+
+### Setup
+
+#### Get cppfront with diagnostics
+
+You'll need to build my version of cppfront to get the diagnostics currently (until a PR is
+officially pushed in). Just pull it from my cppfront repo and follow the build instructions like
+usual (Found at:
+https://hsutter.github.io/cppfront/welcome/overview/#how-do-i-get-and-build-cppfront)
+
+Once you've got it built, make sure its in your path too. Setting the path in the plugin config
+isn't done yet.
+
+#### Run the plugin
+
+You can use the `Run and Debug` in vscode to run the plugin for testing.
+
+#### Running tests
+
+There aren't many, but you can run them with `npm test`
+
+### Code Layout
+
+The relevant code is in `project-root/server/src/`
+
+- `server.ts`:  
+  This is "main" file where the entire project is ran from. All of the lsp functionality stems from
+  this file. I've started to separate things out into their own modules, but its still rough.
+
+- `diagnostics.ts`:  
+  This file contains all the main definitions we need for working with the diagnostics output from
+  cppfront. It has the type definitions and the functions that let us query the data
+
+- `definition.ts`:  
+  Implements the go-to defintiion functionality. I think ideally, I want to separate every piece of
+  lsp functionality into its own module so we can get `server.ts` really clean looking at the end
+
+- `util.ts`:  
+  This file contains very general helper functions that are probably used by many other modules
+
+- Test Files:
+  For each functionality implementation file (like `definition.ts`), I want to make a `*.test.ts`
+  equivalent to we have an easy way to test things out each piece of functionality if needed.
 
 ## Other notes:
 
