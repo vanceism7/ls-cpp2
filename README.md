@@ -14,9 +14,12 @@ quickly if they're useful)
 
 Currently this language server has the following features:
 
-- Error Diagnostics
-- Auto Completion (somewhat, it's a little clunky still)
-- Go to Definition
+- Error Diagnostics  
+  ![image](https://vanceism7.us/cppfront/cpp2-errors.png)
+- Auto Completion (somewhat, it's a little clunky still)  
+  ![image](https://vanceism7.us/cppfront/cpp2-autocompletion.gif)
+- Go to Definition  
+  ![image](https://vanceism7.us/cppfront/cpp2-goto-def.gif)
 
 ## Contributing
 
