@@ -12,7 +12,7 @@ quickly if they're useful)
 
 ## Features
 
-Currently this language server can report:
+Currently this language server has the following features:
 
 - Error Diagnostics
 - Auto Completion (somewhat, it's a little clunky still)
