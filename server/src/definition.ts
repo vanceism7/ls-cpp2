@@ -7,6 +7,7 @@ import {
   CppfrontSymbol,
   findSymbolByText,
   getDiagnostics,
+  getInScopeSymbols,
   type CppfrontResult,
 } from "./diagnostics";
 
@@ -56,8 +57,9 @@ export async function gotoDefinition(
   const documentText = documents.get(params.textDocument.uri)?.getText();
   if (!documentText) return null;
   const diagnostics = await getDiagnostics(params.textDocument.uri);
+  const inScopeSymbols = getInScopeSymbols(diagnostics, params.position);
 
-  const symbol = findSymbol(params.position, diagnostics.symbols, documentText);
+  const symbol = findSymbol(params.position, inScopeSymbols, documentText);
   if (!symbol) return null;
 
   return {
