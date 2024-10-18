@@ -63,15 +63,18 @@
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-		"test": "sh ./scripts/e2e.sh"
+		"test": "mocha"
 	},
 	"devDependencies": {
+		"@types/chai": "^5.0.0",
 		"@types/mocha": "^10.0.6",
 		"@types/node": "^20",
 		"@typescript-eslint/eslint-plugin": "^7.1.0",
 		"@typescript-eslint/parser": "^7.1.0",
+		"chai": "^4.5.0",
 		"eslint": "^8.57.0",
 		"mocha": "^10.3.0",
+		"ts-node": "^10.9.2",
 		"typescript": "^5.6.2"
 	}
 }

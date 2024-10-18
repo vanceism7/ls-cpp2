@@ -18,6 +18,7 @@ import {
   DocumentDiagnosticReportKind,
   type DocumentDiagnosticReport,
   Position,
+  Location,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -26,11 +27,13 @@ import { promisify } from "util";
 import * as fs from "fs";
 import {
   cleanDiagnosticsFile,
+  findSymbolByText,
   genDiagnostics,
   getDiagnostics,
   getInScopeSymbols,
   getSymbolKind,
 } from "./diagnostics";
+import { gotoDefinition } from "./definition";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -71,6 +74,7 @@ connection.onInitialize((params: InitializeParams) => {
         interFileDependencies: false,
         workspaceDiagnostics: false,
       },
+      definitionProvider: true,
     },
   };
   if (hasWorkspaceFolderCapability) {
@@ -238,6 +242,14 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
   }
   return item;
 });
+
+connection.onDefinition(
+  async (
+    params: TextDocumentPositionParams
+  ): Promise<Location | Location[] | null> => {
+    return gotoDefinition(documents, params);
+  }
+);
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

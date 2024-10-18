@@ -8,14 +8,14 @@ import { awaitExec, unuri } from "./util";
 import { CompletionItemKind } from "vscode-languageserver";
 
 /** The main container of diagnostics results from cppfront compilation */
-type CppfrontResult = {
+export type CppfrontResult = {
   symbols: CppfrontSymbol[];
   errors: CppfrontError[];
   scopes: CppfrontScopes;
 };
 
 /** The symbols declared in a cppfront diagnostics file */
-type CppfrontSymbol = {
+export type CppfrontSymbol = {
   symbol: string;
   kind: "function" | "var" | "type" | "namespace";
   scope: string;
@@ -24,7 +24,7 @@ type CppfrontSymbol = {
 };
 
 /** The error information from a cppfront diagnostics file */
-type CppfrontError = {
+export type CppfrontError = {
   file: string;
   msg: string;
   symbol: string;
@@ -126,6 +126,13 @@ function tryParseDiagnostics(s: string): CppfrontResult {
 //----------------------------//
 // Query Diagnostics for info //
 //----------------------------//
+
+export function findSymbolByText(
+  symbolText: string,
+  diagnostics: CppfrontResult
+) {
+  return diagnostics.symbols.find((s) => s.symbol == symbolText);
+}
 
 /**
  * Query our diagnostics info for which scopes we have access to at `position`
