@@ -4,9 +4,11 @@ This is a proof-of-concept language server for [cpp2]. We may end up writing the
 a different language, but since I've never done this before, starting here is the easiest way to
 begin.
 
-This language server relies on my personal cppfront branch which you can find at
+This language server relies on my personal cppfront repo which you can find at
 https://github.com/vanceism7/cppfront (although hopefully I can get the changes merged upstream
 quickly if they're useful)
+
+**Note**: Make sure to use the `vjp/diagnostics` branch when building. This is the branch with my most recent changes and additions.
 
 [cpp2]: https://hsutter.github.io/cppfront/
 
@@ -30,7 +32,7 @@ I haven't given this much thought yet, but here's probably what you need to do..
 #### Get cppfront with diagnostics
 
 You'll need to build my version of cppfront to get the diagnostics currently (until a PR is
-officially pushed in). Just pull it from my cppfront repo and follow the build instructions like
+officially pushed in). Just pull it from my cppfront repo (and remember to use the `vjp/diagnostics` branch!) and follow the build instructions like
 usual (Found at:
 https://hsutter.github.io/cppfront/welcome/overview/#how-do-i-get-and-build-cppfront)
 
