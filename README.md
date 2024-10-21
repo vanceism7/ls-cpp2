@@ -8,7 +8,8 @@ This language server relies on my personal cppfront repo which you can find at
 https://github.com/vanceism7/cppfront (although hopefully I can get the changes merged upstream
 quickly if they're useful)
 
-**Note**: Make sure to use the `vjp/diagnostics` branch when building. This is the branch with my most recent changes and additions.
+**Note**: Make sure to use the `vjp/diagnostics` branch when building. This is the branch with my
+most recent changes and additions.
 
 [cpp2]: https://hsutter.github.io/cppfront/
 
@@ -22,6 +23,35 @@ Currently this language server has the following features:
   ![image](https://vanceism7.us/cppfront/cpp2-autocompletion.gif)
 - Go to Definition  
   ![image](https://vanceism7.us/cppfront/cpp2-goto-def.gif)
+
+## Bugs/Anti-Features
+
+This language server is super alpha level software (pre-alpha?) - it's totally experimental at this
+point. As such, there are a couple of annoyances with how this thing currently work; hopefully we'll
+be able to smooth these out over time, but I wanted to list them out here explicitly so people are
+aware of them.
+
+1. **Error reporting is one step behind.**  
+   As far as I understand, `cppfront` works on files, not on strings of text. This means that when
+   you make a change to your file, the error diagnostics won't update until you have:  
+    **a.** Saved the file  
+    **b.** Made another edit to the file to trigger a new set of diagnostics to be generated.  
+   This is a regretable state of affairs, but it should be easy to fix as soon as we add the ability
+   to cppfront to process text directly. We just need to make a PR that gives us a flag to do this
+   (like the way you can say `g++ -x` with normal cpp compilers).
+
+2. **Error reporting is incomplete**  
+   `cppfront` doesn't capture all compilation errors; it only captures cpp2 related errors, which
+   are mostly to do with enforcing safety, best practices, and proper cpp2 syntax. For example, In
+   my own testing of cppfront, if you use an undeclared variable, you will get no errors. This is
+   because cppfront isn't meant to fully compile a program, its only meant to convert it to c++, and
+   then our normal c++ compilers handle the rest. This means the language server will be very
+   incomplete until we incorporate the diagnostics from c++ compilers.
+
+3. **Autocompletion is incomplete**  
+   We aren't capturing all of the nice info we'd like to get for our autocompletion data just yet.
+   For example: we aren't capturing function parameters, doc comments, or even the ability to grab
+   child symbols (such as `person.name`, or `std::cout`).
 
 ## Contributing
 
