@@ -47,7 +47,7 @@ are aware of them.
    For example: we aren't capturing function parameters, doc comments, or even the ability to grab
    child symbols (such as `person.name`, or `std::cout`).
 
-4. **Can't configure lsp server in vscode settings**
+4. **Can't configure lsp server in vscode settings**  
    Eventually, we want to be able to specify the paths for where our `cppfront` and c++ compiler are
    located (And probably headers/libs too), but this ain't working yet.
 
