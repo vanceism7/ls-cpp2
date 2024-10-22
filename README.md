@@ -8,7 +8,7 @@ This language server relies on my personal cppfront repo which you can find at
 https://github.com/vanceism7/cppfront (although hopefully I can get the changes merged upstream
 quickly if they're useful)
 
-**Note**: Make sure to use the `vjp/diagnostics` branch when building. This is the branch with my
+**Note**: Make sure to use the `lsp-main` branch when building. This is the branch with my
 most recent changes and additions.
 
 [cpp2]: https://hsutter.github.io/cppfront/
@@ -27,18 +27,12 @@ Currently this language server has the following features:
 ## Bugs/Anti-Features
 
 This language server is super alpha level software (pre-alpha?) - it's totally experimental at this
-point. As such, there are a couple of annoyances with how this thing currently work; hopefully we'll
-be able to smooth these out over time, but I wanted to list them out here explicitly so people are
-aware of them.
+point. As such, there are a couple things which aren't completely functional just yet; hopefully
+we'll be able to smooth these out over time, but I wanted to list them out here explicitly so people
+are aware of them.
 
-1. **Error reporting is one step behind.**  
-   As far as I understand, `cppfront` works on files, not on strings of text. This means that when
-   you make a change to your file, the error diagnostics won't update until you have:  
-    **a.** Saved the file  
-    **b.** Made another edit to the file to trigger a new set of diagnostics to be generated.  
-   This is a regretable state of affairs, but it should be easy to fix as soon as we add the ability
-   to cppfront to process text directly. We just need to make a PR that gives us a flag to do this
-   (like the way you can say `g++ -x` with normal cpp compilers).
+1. ~~**Error reporting is one step behind.**~~  
+   I was able to fix this with my `vjp/from-stdin` branch (awaiting merge approval) 🎉
 
 2. **Error reporting is incomplete**  
    `cppfront` doesn't capture all compilation errors; it only captures cpp2 related errors, which
@@ -53,6 +47,10 @@ aware of them.
    For example: we aren't capturing function parameters, doc comments, or even the ability to grab
    child symbols (such as `person.name`, or `std::cout`).
 
+4. **Can't configure lsp server in vscode settings**
+   Eventually, we want to be able to specify the paths for where our `cppfront` and c++ compiler are
+   located (And probably headers/libs too), but this ain't working yet.
+
 ## Contributing
 
 I haven't given this much thought yet, but here's probably what you need to do...:
@@ -62,8 +60,8 @@ I haven't given this much thought yet, but here's probably what you need to do..
 #### Get cppfront with diagnostics
 
 You'll need to build my version of cppfront to get the diagnostics currently (until a PR is
-officially pushed in). Just pull it from my cppfront repo (and remember to use the `vjp/diagnostics` branch!) and follow the build instructions like
-usual (Found at:
+officially pushed in). Just pull it from my cppfront repo (and remember to use the `vjp/lsp-main`
+branch!) and follow the build instructions like usual (Found at:
 https://hsutter.github.io/cppfront/welcome/overview/#how-do-i-get-and-build-cppfront)
 
 Once you've got it built, make sure its in your path too. Setting the path in the plugin config

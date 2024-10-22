@@ -4,7 +4,7 @@
 
 import * as fs from "fs";
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
-import { awaitExec, unuri } from "./util";
+import { awaitSpawn, unuri } from "./util";
 import { CompletionItemKind } from "vscode-languageserver";
 
 /** The main container of diagnostics results from cppfront compilation */
@@ -54,18 +54,26 @@ type CppfrontScopes = {
 /** The main function to read diagnostics from the cppfront diagnostics file */
 export async function genDiagnostics(
   cppfrontPath: string,
-  documentUri: string
+  document: TextDocument
 ) {
-  // This might not be right, but for now, we remove the weird uri stuff and make it
-  // back into a local file style reference. Otherwise, cppfront fails to read the file
-  const sourceFile = unuri(documentUri);
+  const diagnosticsFile = getDiagnosticsFilename(unuri(document.uri));
 
-  await runCppfront(cppfrontPath, sourceFile);
-  return getDiagnostics(documentUri);
+  await runCppfront(cppfrontPath, diagnosticsFile, document.getText());
+  return getDiagnostics(document.uri);
 }
 
+/**
+ * Get the name of the diagnostics file for the given file
+ */
+const getDiagnosticsFilename = (fn: string) => `${fn}-diagnostics.json`;
+
 export async function getDiagnostics(uri: string) {
+  //
+  // This might not be right, but for now, we remove the weird uri stuff and make it
+  // back into a local file style reference. Otherwise, cppfront fails to read the file
+  //
   const sourceFile = unuri(uri);
+
   const text = await readDiagnostics(sourceFile);
   return parseCppfrontDiagnostics(text);
 }
@@ -76,14 +84,21 @@ export async function getDiagnostics(uri: string) {
  */
 async function runCppfront(
   cppfrontPath: string,
-  sourceFile: string
+  diagnosticsFile: string,
+  source: string
 ): Promise<{ stdout: string; stderr: string }> {
-  // Finally, we run the file through cppfront. Diagnostics are written to file on disk
   try {
-    const { stdout, stderr } = await awaitExec(
-      `${cppfrontPath} ${sourceFile} -di -o stdout`
+    //
+    // Run the source through cppfront. Diagnostics are written to `diagnosticsFile`
+    const result = await awaitSpawn(
+      `${cppfrontPath}`,
+      ["-di", diagnosticsFile, "stdin"],
+      source
     );
-    return { stdout, stderr };
+
+    console.log(result);
+
+    return { stdout: result, stderr: "" };
   } catch (err: any) {
     return { stdout: "", stderr: err.toString() };
   }
@@ -94,7 +109,7 @@ async function runCppfront(
  * (to be fixed in cppfront later)
  */
 async function readDiagnostics(sourceFile: string) {
-  const file = `${sourceFile}-diagnostics`;
+  const file = getDiagnosticsFilename(sourceFile);
 
   const text = await fs.promises.readFile(file);
   return text.toString();
@@ -106,8 +121,7 @@ async function readDiagnostics(sourceFile: string) {
  * which is my own fault)
  */
 function parseCppfrontDiagnostics(text: string): CppfrontResult {
-  const fixedText = text.replace(/,\]/g, "]").replace(/,}/g, "}");
-  const json = tryParseDiagnostics(fixedText);
+  const json = tryParseDiagnostics(text);
 
   // console.log(json);
   return json;
@@ -193,6 +207,6 @@ export function getSymbolKind(symbol: CppfrontSymbol): CompletionItemKind {
 
 /** Clears out diagnostic files */
 export async function cleanDiagnosticsFile(textDocument: TextDocument) {
-  const file = `${unuri(textDocument.uri)}-diagnostics`;
+  const file = getDiagnosticsFilename(unuri(textDocument.uri));
   await fs.promises.unlink(file);
 }

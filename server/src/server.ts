@@ -187,7 +187,7 @@ async function validateTextDocument(
   // In this simple example we get the settings for every validate run.
   const settings = await getDocumentSettings(textDocument.uri);
 
-  const result = await genDiagnostics(settings.cppfrontPath, textDocument.uri);
+  const result = await genDiagnostics(settings.cppfrontPath, textDocument);
   const diagnostics: Diagnostic[] = [];
 
   for (const e of result.errors) {
