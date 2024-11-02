@@ -32,7 +32,7 @@ we'll be able to smooth these out over time, but I wanted to list them out here 
 are aware of them.
 
 1. ~~**Error reporting is one step behind.**~~  
-   I was able to fix this with my `vjp/from-stdin` branch (awaiting merge approval) 🎉
+   I was able to fix this with a PR from my `vjp/from-stdin` branch 🎉
 
 2. **Error reporting is incomplete**  
    `cppfront` doesn't capture all compilation errors; it only captures cpp2 related errors, which
@@ -48,7 +48,7 @@ are aware of them.
    child symbols (such as `person.name`, or `std::cout`).
 
 4. **Can't configure lsp server in vscode settings**  
-   Eventually, we want to be able to specify the paths for where our `cppfront` and c++ compiler are
+   Eventually, we want to be able to specify the paths of where our `cppfront` and c++ compiler are
    located (And probably headers/libs too), but this ain't working yet.
 
 ## Contributing
@@ -92,11 +92,11 @@ The relevant code is in `project-root/server/src/`
   lsp functionality into its own module so we can get `server.ts` really clean looking at the end
 
 - `util.ts`:  
-  This file contains very general helper functions that are probably used by many other modules
+  This file contains very general helper functions that are used by many other modules
 
 - Test Files:
   For each functionality implementation file (like `definition.ts`), I want to make a `*.test.ts`
-  equivalent to we have an easy way to test things out each piece of functionality if needed.
+  equivalent so we have an easy way to test each piece of functionality if needed.
 
 ## Other notes:
 
