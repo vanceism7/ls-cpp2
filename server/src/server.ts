@@ -27,9 +27,8 @@ import { promisify } from "util";
 import * as fs from "fs";
 import {
   cleanDiagnosticsFile,
-  findSymbolByText,
   genDiagnostics,
-  getDiagnostics,
+  getCpp2Diagnostics,
   getInScopeSymbols,
   getSymbolKind,
 } from "./diagnostics";
@@ -220,7 +219,7 @@ connection.onDidChangeWatchedFiles((_change) => {
 connection.onCompletion(
   async (pos: TextDocumentPositionParams): Promise<CompletionItem[]> => {
     //
-    const diagnostics = await getDiagnostics(pos.textDocument.uri);
+    const diagnostics = await getCpp2Diagnostics(pos.textDocument.uri);
 
     // Get our in-scope symbols and transform them into a CompletionItem list
     return getInScopeSymbols(diagnostics, pos.position).map((d) => ({

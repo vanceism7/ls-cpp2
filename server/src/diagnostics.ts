@@ -59,7 +59,7 @@ export async function genDiagnostics(
   const diagnosticsFile = getDiagnosticsFilename(unuri(document.uri));
 
   await runCppfront(cppfrontPath, diagnosticsFile, document.getText());
-  return getDiagnostics(document.uri);
+  return getCpp2Diagnostics(document.uri);
 }
 
 /**
@@ -67,7 +67,11 @@ export async function genDiagnostics(
  */
 const getDiagnosticsFilename = (fn: string) => `${fn}-diagnostics.json`;
 
-export async function getDiagnostics(uri: string) {
+//----------------------//
+// Cppfront Diagnostics //
+//----------------------//
+
+export async function getCpp2Diagnostics(uri: string) {
   //
   // This might not be right, but for now, we remove the weird uri stuff and make it
   // back into a local file style reference. Otherwise, cppfront fails to read the file
@@ -75,7 +79,7 @@ export async function getDiagnostics(uri: string) {
   const sourceFile = unuri(uri);
 
   const text = await readDiagnostics(sourceFile);
-  return parseCppfrontDiagnostics(text);
+  return tryParseDiagnostics(text);
 }
 
 /** Run Cppfront on the specified text document
@@ -113,18 +117,6 @@ async function readDiagnostics(sourceFile: string) {
 
   const text = await fs.promises.readFile(file);
   return text.toString();
-}
-
-/**
- * Takes the text content of a diagnostics file and parses it into our main type
- * (Currently needs to remove trailing commas because cppfront emits the json wrong,
- * which is my own fault)
- */
-function parseCppfrontDiagnostics(text: string): CppfrontResult {
-  const json = tryParseDiagnostics(text);
-
-  // console.log(json);
-  return json;
 }
 
 /** Tries to parse the json or returns an empty CppFrontResult */
