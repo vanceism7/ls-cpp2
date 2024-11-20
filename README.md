@@ -47,9 +47,8 @@ are aware of them.
    For example: we aren't capturing function parameters, doc comments, or even the ability to grab
    child symbols (such as `person.name`, or `std::cout`).
 
-4. **Can't configure lsp server in vscode settings**  
-   Eventually, we want to be able to specify the paths of where our `cppfront` and c++ compiler are
-   located (And probably headers/libs too), but this ain't working yet.
+4. ~~**Can't configure lsp server in vscode settings**~~  
+   This is fixed now. You can set config settings under the `ls-cpp2` in the extensions category
 
 ## Contributing
 

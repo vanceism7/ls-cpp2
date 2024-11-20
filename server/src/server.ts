@@ -101,32 +101,34 @@ connection.onInitialized(() => {
   }
 });
 
-// The example settings
-interface ExampleSettings {
+//ls-cpp2 settings
+interface Cpp2Settings {
   cppfrontPath: string;
-  clangdPath: string;
+  cppfrontIncludePath: string | null;
+  cppCompilerPath: string;
   maxNumberOfProblems: number;
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
-const defaultSettings: ExampleSettings = {
+const defaultSettings: Cpp2Settings = {
   maxNumberOfProblems: 1000,
   cppfrontPath: "cppfront",
-  clangdPath: "clangd",
+  cppfrontIncludePath: null,
+  cppCompilerPath: "",
 };
-let globalSettings: ExampleSettings = defaultSettings;
+let globalSettings: Cpp2Settings = defaultSettings;
 
 // Cache the settings of all open documents
-const documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
+const documentSettings: Map<string, Thenable<Cpp2Settings>> = new Map();
 
 connection.onDidChangeConfiguration((change) => {
   if (hasConfigurationCapability) {
     // Reset all cached document settings
     documentSettings.clear();
   } else {
-    globalSettings = <ExampleSettings>(
+    globalSettings = <Cpp2Settings>(
       (change.settings.languageServerExample || defaultSettings)
     );
   }
@@ -136,7 +138,7 @@ connection.onDidChangeConfiguration((change) => {
   connection.languages.diagnostics.refresh();
 });
 
-function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
+function getDocumentSettings(resource: string): Thenable<Cpp2Settings> {
   if (!hasConfigurationCapability) {
     return Promise.resolve(globalSettings);
   }
