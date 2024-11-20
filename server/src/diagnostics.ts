@@ -5,10 +5,11 @@
 import * as fs from "fs";
 import * as os from "os";
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
-import { awaitSpawn, isStringEmpty, unuri } from "./util";
+import { awaitSpawn, isStringEmpty, tryUnlink, unuri } from "./util";
 import { CompletionItemKind } from "vscode-languageserver";
 import * as which from "which";
 import path = require("path");
+import { glob } from "glob";
 
 /** The main container of diagnostics results from cppfront compilation */
 export type CppfrontResult = {
@@ -252,14 +253,16 @@ async function writeTempFile(contents: string) {
 }
 
 async function deleteTempFiles(fn: string) {
-  try {
-    await fs.promises.unlink(fn);
-    await fs.promises.unlink(
-      path.join("./", path.basename(fn.replace(".cpp", ".obj")))
-    );
-  } catch (_) {
-    return;
-  }
+  // Delete the main temp file `fn`
+  console.log("Deleting files:", fn);
+  await tryUnlink(fn);
+
+  // Glob for local compiler artifacts in the main directory and delete them
+  const tempGlob = path.join(".", path.basename(fn.replace(".cpp", ".*")));
+  const tempFiles = await glob.glob(tempGlob);
+  tempFiles.forEach(async (f) => {
+    await fs.promises.unlink(f);
+  });
 }
 
 /**
@@ -381,5 +384,6 @@ export function getSymbolKind(symbol: CppfrontSymbol): CompletionItemKind {
 /** Clears out diagnostic files */
 export async function cleanDiagnosticsFile(textDocument: TextDocument) {
   const file = getDiagnosticsFilename(unuri(textDocument.uri));
-  await fs.promises.unlink(file);
+  await tryUnlink(file);
+  await tryUnlink(`${file}.sarif`);
 }

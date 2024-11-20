@@ -1,5 +1,6 @@
 import { exec, spawn } from "child_process";
 import { promisify } from "util";
+import * as fs from "fs";
 
 /**
  * Turns a uri into a local file path
@@ -58,4 +59,18 @@ export function awaitSpawn(
  */
 export function isStringEmpty(input: string | null | undefined): boolean {
   return !input || input.trim() == "";
+}
+
+/**
+ * Try to unlink/delete a file, or silently exit if the file doesn't exist or something of the sort
+ */
+export async function tryUnlink(file: string, logger?: (s: string) => void) {
+  try {
+    await fs.promises.unlink(file);
+  } catch (err: any) {
+    if (logger) {
+      logger(err.toString());
+    }
+    return;
+  }
 }
