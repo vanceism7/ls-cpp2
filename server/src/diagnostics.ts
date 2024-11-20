@@ -114,7 +114,7 @@ async function runCppfront(
     // Run the source through cppfront. Diagnostics are written to `diagnosticsFile`
     const result = await awaitSpawn(
       `${cppfrontPath}`,
-      ["-di", diagnosticsFile, "stdin"],
+      ["-di", diagnosticsFile, "stdin", "-o", "stdout"],
       source
     );
 
@@ -234,9 +234,6 @@ async function tryRunCppCompiler(
       tempSource
     );
 
-    console.log(`"${compilerPath}" ${args.join(" ")}`);
-
-    // const result = await awaitExec(`"${compilerPath}" ${args}`);
     const result = await awaitSpawn(compilerPath, args);
 
     return { stdout: result, stderr: "" };
