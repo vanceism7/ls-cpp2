@@ -13,12 +13,13 @@ export const unuri = (uri: string) =>
 export function awaitSpawn(
   command: string,
   args: string[],
-  inputText: string
+  inputText?: string
   //
 ): Promise<string> {
   //
   return new Promise((resolve, reject) => {
     const cliProcess = spawn(command, args);
+    console.log(cliProcess.spawnargs);
 
     let stdout = "";
     let stderr = "";
@@ -50,4 +51,11 @@ export function awaitSpawn(
       cliProcess.stdin.end();
     }
   });
+}
+
+/**
+ * Check if a string is null or empty/only whitespace
+ */
+export function isStringEmpty(input: string | null | undefined): boolean {
+  return !input || input.trim() == "";
 }

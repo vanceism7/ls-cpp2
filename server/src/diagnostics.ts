@@ -3,9 +3,12 @@
 //------------------//
 
 import * as fs from "fs";
+import * as os from "os";
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
-import { awaitSpawn, unuri } from "./util";
+import { awaitSpawn, isStringEmpty, unuri } from "./util";
 import { CompletionItemKind } from "vscode-languageserver";
+import * as which from "which";
+import path = require("path");
 
 /** The main container of diagnostics results from cppfront compilation */
 export type CppfrontResult = {
@@ -54,11 +57,26 @@ type CppfrontScopes = {
 /** The main function to read diagnostics from the cppfront diagnostics file */
 export async function genDiagnostics(
   cppfrontPath: string,
+  cppfrontIncludePath: string | null,
+  cppCompilerPath: string,
   document: TextDocument
 ) {
   const diagnosticsFile = getDiagnosticsFilename(unuri(document.uri));
 
-  await runCppfront(cppfrontPath, diagnosticsFile, document.getText());
+  const compileResult = await runCppfront(
+    cppfrontPath,
+    diagnosticsFile,
+    document.getText()
+  );
+
+  const cppDiagnostics = await getCppDiagnostics(
+    diagnosticsFile,
+    cppfrontPath,
+    cppCompilerPath,
+    cppfrontIncludePath,
+    compileResult.stdout
+  );
+
   return getCpp2Diagnostics(document.uri);
 }
 
@@ -127,6 +145,172 @@ function tryParseDiagnostics(s: string): CppfrontResult {
     console.log("Error parsing json", s, err);
     return { errors: [], symbols: [], scopes: {} };
   }
+}
+
+//-----------------//
+// Cpp Diagnostics //
+//-----------------//
+
+/**
+ * Compile generated cpp code and get diagnostic results from it
+ */
+async function getCppDiagnostics(
+  fn: string,
+  cppfrontPath: string,
+  compilerPath: string,
+  cppfrontIncludePath: string | null,
+  cpp: string
+) {
+  //
+  // Make sure we can compile our cpp file
+  //
+  if (isStringEmpty(compilerPath)) return null;
+  if (isStringEmpty(cppfrontIncludePath)) {
+    cppfrontIncludePath = await searchForCppfrontInclude(cppfrontPath);
+  }
+
+  // Compile the cpp file and get the diagnostics
+  //
+  const compileResult = await runCppCompiler(
+    fn,
+    compilerPath,
+    cppfrontIncludePath!,
+    cpp
+  );
+
+  // console.log(compileResult);
+
+  return null;
+}
+
+/**
+ * Generate the cppfront include path to use from the cppfront binary
+ */
+export async function searchForCppfrontInclude(
+  cppfrontPath: string
+): Promise<string> {
+  const binaryPath = await which(cppfrontPath);
+  return path.join(binaryPath, "..", "..", "include");
+}
+
+/**
+ * Runs the main cpp compiler to get diagnostics
+ */
+async function runCppCompiler(
+  fn: string,
+  compilerPath: string,
+  cppfrontIncludePath: string,
+  source: string
+) {
+  const result = await tryRunCppCompiler(
+    fn,
+    compilerPath,
+    cppfrontIncludePath,
+    source
+  );
+
+  if (compilerPath.includes("clang")) {
+    await fs.promises.writeFile(`${fn}.sarif`, result.stdout);
+  }
+
+  return { stdout: result, stderr: "" };
+}
+
+/**
+ * Runs the main cpp compiler to get diagnostics
+ */
+async function tryRunCppCompiler(
+  fn: string,
+  compilerPath: string,
+  cppfrontIncludePath: string,
+  source: string
+) {
+  const tempSource = await writeTempFile(source);
+  try {
+    const args = makeCompilerArgs(
+      fn,
+      compilerPath,
+      cppfrontIncludePath,
+      tempSource
+    );
+
+    console.log(`"${compilerPath}" ${args.join(" ")}`);
+
+    // const result = await awaitExec(`"${compilerPath}" ${args}`);
+    const result = await awaitSpawn(compilerPath, args);
+
+    return { stdout: result, stderr: "" };
+  } catch (err: any) {
+    return { stdout: err.toString(), stderr: "" };
+  } finally {
+    await deleteTempFiles(tempSource);
+  }
+}
+
+async function writeTempFile(contents: string) {
+  const tempPath = path.join(os.tmpdir(), `tempfile-${Date.now()}.cpp`);
+  await fs.promises.writeFile(tempPath, contents);
+
+  return tempPath;
+}
+
+async function deleteTempFiles(fn: string) {
+  try {
+    await fs.promises.unlink(fn);
+    await fs.promises.unlink(
+      path.join("./", path.basename(fn.replace(".cpp", ".obj")))
+    );
+  } catch (_) {
+    return;
+  }
+}
+
+/**
+ * Generate a list of compiler args based on the compiler used (msvc, clang, or gcc)
+ */
+export function makeCompilerArgs(
+  fn: string,
+  compilerPath: string,
+  cppfrontIncludePath: string,
+  source: string
+): string[] {
+  const sarif = `${fn}.sarif`;
+
+  // Clang
+  //
+  if (compilerPath.includes("clang")) {
+    return [
+      "-std=c++20",
+      `-I"${cppfrontIncludePath}"`,
+      "-fdiagnostics-format=sarif",
+      source,
+    ];
+  }
+  // GCC
+  //
+  else if (compilerPath.includes("gcc") || compilerPath.includes("g++")) {
+    return [
+      "-std=c++20",
+      `-I"${cppfrontIncludePath}"`,
+      "-fdiagnostics-format=sarif-file",
+      sarif,
+      source,
+    ];
+  }
+  // MSVC
+  //
+  else if (compilerPath.includes("cl")) {
+    return [
+      "-EHsc",
+      "-std:c++20",
+      `-I${cppfrontIncludePath}`,
+      "-experimental:log",
+      sarif,
+      source,
+    ];
+  }
+
+  return [];
 }
 
 //----------------------------//
