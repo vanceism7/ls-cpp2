@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { findSymbol, getSymbolTextAtPos } from "./definition";
-import { CppfrontSymbol } from "./diagnostics";
+import { CppfrontSymbol } from "./diagnostics/diagnostics";
 
 describe("Definition", () => {
   //

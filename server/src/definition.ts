@@ -9,7 +9,7 @@ import {
   getCpp2Diagnostics,
   getInScopeSymbols,
   type CppfrontResult,
-} from "./diagnostics";
+} from "./diagnostics/diagnostics";
 
 /**
  * Finds the symbol/identifier located at the current cursor position

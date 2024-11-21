@@ -5,7 +5,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
-import { awaitSpawn, isStringEmpty, tryUnlink, unuri } from "./util";
+import { awaitSpawn, isStringEmpty, tryUnlink, unuri } from "../util";
 import { CompletionItemKind } from "vscode-languageserver";
 import * as which from "which";
 import * as sarif from "sarif";

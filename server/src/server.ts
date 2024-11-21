@@ -31,7 +31,7 @@ import {
   getCpp2Diagnostics,
   getInScopeSymbols,
   getSymbolKind,
-} from "./diagnostics";
+} from "./diagnostics/diagnostics";
 import { gotoDefinition } from "./definition";
 
 // Create a connection for the server, using Node's IPC as a transport.
