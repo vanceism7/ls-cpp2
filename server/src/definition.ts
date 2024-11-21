@@ -9,8 +9,8 @@ import {
   getDiagnostics,
   getInScopeSymbols,
   type CppfrontResult,
-} from "../diagnostics/diagnostics";
-import { getSymbolTextAtPos } from "../symbol/symbol";
+} from "./diagnostics/diagnostics";
+import { getSymbolTextAtPos } from "./symbol/symbol";
 
 /** Finds a symbol within some set of text */
 export function findSymbol(
