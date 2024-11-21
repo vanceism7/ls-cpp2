@@ -32,7 +32,7 @@ import {
   getInScopeSymbols,
   getSymbolKind,
 } from "./diagnostics/diagnostics";
-import { gotoDefinition } from "./definition";
+import { gotoDefinition } from "./definition/definition";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
