@@ -8,6 +8,7 @@ import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import { awaitSpawn, isStringEmpty, tryUnlink, unuri } from "./util";
 import { CompletionItemKind } from "vscode-languageserver";
 import * as which from "which";
+import * as sarif from "sarif";
 import path = require("path");
 import { glob } from "glob";
 
@@ -172,16 +173,23 @@ async function getCppDiagnostics(
 
   // Compile the cpp file and get the diagnostics
   //
-  const compileResult = await runCppCompiler(
-    fn,
-    compilerPath,
-    cppfrontIncludePath!,
-    cpp
-  );
+  await runCppCompiler(fn, compilerPath, cppfrontIncludePath!, cpp);
 
-  // console.log(compileResult);
+  return parseCppDiagnostics(`${fn}.sarif`);
+}
 
-  return null;
+/**
+ * Parse the results of the cpp sarif file for use in diagnostics
+ */
+async function parseCppDiagnostics(
+  sarifFile: string
+): Promise<sarif.Log | null> {
+  try {
+    const text = await fs.promises.readFile(sarifFile);
+    return JSON.parse(text.toString());
+  } catch (err) {
+    return null;
+  }
 }
 
 /**
