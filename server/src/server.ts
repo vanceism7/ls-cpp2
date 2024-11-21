@@ -24,7 +24,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   cleanDiagnosticsFile,
   genDiagnostics,
-  getCpp2Diagnostics,
+  parseCpp2Diagnostics,
   getInScopeSymbols,
   getSymbolKind,
 } from "./diagnostics/diagnostics";
@@ -222,7 +222,7 @@ connection.onDidChangeWatchedFiles((_change) => {
 connection.onCompletion(
   async (pos: TextDocumentPositionParams): Promise<CompletionItem[]> => {
     //
-    const diagnostics = await getCpp2Diagnostics(pos.textDocument.uri);
+    const diagnostics = await parseCpp2Diagnostics(pos.textDocument.uri);
 
     // Get our in-scope symbols and transform them into a CompletionItem list
     return getInScopeSymbols(diagnostics, pos.position).map((d) => ({

@@ -66,8 +66,8 @@ export async function genDiagnostics(
   const diagnosticsFile = getDiagnosticsFilename(unuri(document.uri));
 
   const compileResult = await runCppfront(
-    cppfrontPath,
     diagnosticsFile,
+    cppfrontPath,
     document.getText()
   );
 
@@ -79,11 +79,15 @@ export async function genDiagnostics(
     compileResult.stdout
   );
 
-  return getCpp2Diagnostics(document.uri);
+  return parseCpp2Diagnostics(diagnosticsFile);
 }
 
 /**
  * Get the name of the diagnostics file for the given file
+ *
+ * **Note**:
+ * This might not be right, but for now, we remove the weird uri stuff and make it
+ * back into a local file style reference. Otherwise, cppfront fails to read the file
  */
 const getDiagnosticsFilename = (fn: string) => `${fn}-diagnostics.json`;
 
@@ -91,15 +95,10 @@ const getDiagnosticsFilename = (fn: string) => `${fn}-diagnostics.json`;
 // Cppfront Diagnostics //
 //----------------------//
 
-export async function getCpp2Diagnostics(uri: string) {
+export async function parseCpp2Diagnostics(diagnosticsFile: string) {
   //
-  // This might not be right, but for now, we remove the weird uri stuff and make it
-  // back into a local file style reference. Otherwise, cppfront fails to read the file
-  //
-  const sourceFile = unuri(uri);
-
-  const text = await readDiagnostics(sourceFile);
-  return tryParseDiagnostics(text);
+  const text = await fs.promises.readFile(diagnosticsFile);
+  return tryParseDiagnostics(text.toString());
 }
 
 /** Run Cppfront on the specified text document
@@ -107,8 +106,8 @@ export async function getCpp2Diagnostics(uri: string) {
  * (This will be the one referenced by `validateTextDocument`)
  */
 async function runCppfront(
-  cppfrontPath: string,
   diagnosticsFile: string,
+  cppfrontPath: string,
   source: string
 ): Promise<{ stdout: string; stderr: string }> {
   try {
@@ -129,17 +128,8 @@ async function runCppfront(
 }
 
 /**
- * Read the diagnostics file, which is a slightly-ill-formatted json string
- * (to be fixed in cppfront later)
+ * Tries to parse the json or returns an empty CppFrontResult
  */
-async function readDiagnostics(sourceFile: string) {
-  const file = getDiagnosticsFilename(sourceFile);
-
-  const text = await fs.promises.readFile(file);
-  return text.toString();
-}
-
-/** Tries to parse the json or returns an empty CppFrontResult */
 function tryParseDiagnostics(s: string): CppfrontResult {
   try {
     return JSON.parse(s);
