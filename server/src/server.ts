@@ -11,7 +11,6 @@ import {
   InitializeParams,
   DidChangeConfigurationNotification,
   CompletionItem,
-  CompletionItemKind,
   TextDocumentPositionParams,
   TextDocumentSyncKind,
   InitializeResult,
@@ -22,9 +21,6 @@ import {
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { exec } from "child_process";
-import { promisify } from "util";
-import * as fs from "fs";
 import {
   cleanDiagnosticsFile,
   genDiagnostics,
