@@ -34,13 +34,15 @@ are aware of them.
 1. ~~**Error reporting is one step behind.**~~  
    I was able to fix this with a PR from my `vjp/from-stdin` branch 🎉
 
-2. **Error reporting is incomplete**  
+2. **Error reporting is hacky**  
    `cppfront` doesn't capture all compilation errors; it only captures cpp2 related errors, which
-   are mostly to do with enforcing safety, best practices, and proper cpp2 syntax. For example, In
-   my own testing of cppfront, if you use an undeclared variable, you will get no errors. This is
-   because cppfront isn't meant to fully compile a program, its only meant to convert it to c++, and
-   then our normal c++ compilers handle the rest. This means the language server will be very
-   incomplete until we incorporate the diagnostics from c++ compilers.
+   are mostly to do with enforcing safety, best practices, and proper cpp2 syntax. The rest is
+   handled by our normal c++ compilers. I've implemented a basic merging of errors from cpp2 and the
+   normal c++ compilers, but the mapping between symbols is a little weird - the lines match up
+   thanks to `#line` pramgas used in the generated cpp code, but the column numbers don't match.
+   I've mitigated this by using a general word-parse algorithm to try and grab the right symbol, but
+   its far from perfect. We won't be able to fix this until we have better mappings between
+   generated cpp code and cpp2 code.
 
 3. **Autocompletion is incomplete**  
    We aren't capturing all of the nice info we'd like to get for our autocompletion data just yet.
