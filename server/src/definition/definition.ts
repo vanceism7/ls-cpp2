@@ -6,33 +6,11 @@ import {
 import {
   CppfrontSymbol,
   findSymbolByText,
-  parseCpp2Diagnostics,
+  getDiagnostics,
   getInScopeSymbols,
   type CppfrontResult,
 } from "../diagnostics/diagnostics";
-
-/**
- * Finds the symbol/identifier located at the current cursor position
- */
-export function getSymbolTextAtPos(position: Position, text: string): string {
-  //
-  // Break the text into seprate lines so we can grab the line we're looking at
-  const lines = text.split(/\r?\n/g);
-  const lineText = lines[position.line];
-
-  // Find the beginning and end of the symbol/token we're on
-  //
-  // Note: we need to search one character further than where we're at, so we can
-  // find a word when we're at the beginning of it - hence `position.character + 1`
-  //
-  const start = lineText.slice(0, position.character + 1).search(/\b\w+$/);
-  const end = lineText.slice(position.character).search(/\W/);
-
-  return lineText.slice(
-    start,
-    end === -1 ? undefined : position.character + end
-  );
-}
+import { getSymbolTextAtPos } from "../symbol/symbol";
 
 /** Finds a symbol within some set of text */
 export function findSymbol(
@@ -40,10 +18,10 @@ export function findSymbol(
   symbols: CppfrontSymbol[],
   documentText: string
 ) {
-  const symbolText = getSymbolTextAtPos(position, documentText);
-  if (!symbolText) return null;
+  const result = getSymbolTextAtPos(position, documentText);
+  if (!result) return null;
 
-  const symbol = symbols.find((s) => s.symbol == symbolText);
+  const symbol = symbols.find((s) => s.symbol == result.symbol);
   if (!symbol) return null;
 
   return symbol;
@@ -54,12 +32,16 @@ export async function gotoDefinition(
   documents: TextDocuments<TextDocument>,
   params: TextDocumentPositionParams
 ) {
-  const documentText = documents.get(params.textDocument.uri)?.getText();
-  if (!documentText) return null;
-  const diagnostics = await parseCpp2Diagnostics(params.textDocument.uri);
+  const document = documents.get(params.textDocument.uri);
+  if (!document) return null;
+  const diagnostics = await getDiagnostics(document);
   const inScopeSymbols = getInScopeSymbols(diagnostics, params.position);
 
-  const symbol = findSymbol(params.position, inScopeSymbols, documentText);
+  const symbol = findSymbol(
+    params.position,
+    inScopeSymbols,
+    document.getText()
+  );
   if (!symbol) return null;
 
   return {

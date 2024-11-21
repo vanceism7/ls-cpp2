@@ -11,6 +11,7 @@ import * as which from "which";
 import * as sarif from "sarif";
 import path = require("path");
 import { glob } from "glob";
+import { getSymbolTextAtPos } from "../symbol/symbol";
 
 /** The main container of diagnostics results from cppfront compilation */
 export type CppfrontResult = {
@@ -71,7 +72,7 @@ export async function genDiagnostics(
     document.getText()
   );
 
-  const cppDiagnostics = await getCppDiagnostics(
+  await genCppDiagnostics(
     diagnosticsFile,
     cppfrontPath,
     cppCompilerPath,
@@ -79,7 +80,7 @@ export async function genDiagnostics(
     compileResult.stdout
   );
 
-  return parseCpp2Diagnostics(diagnosticsFile);
+  return getDiagnostics(document);
 }
 
 /**
@@ -91,11 +92,72 @@ export async function genDiagnostics(
  */
 const getDiagnosticsFilename = (fn: string) => `${fn}-diagnostics.json`;
 
+/**
+ * Given a document uri, parses the diagnostics files from cppfront and the cpp compiler
+ * and returns the results for usage by the main language server
+ */
+export async function getDiagnostics(document: TextDocument) {
+  //
+  const sourceFile = unuri(document.uri);
+  const diagnosticsFile = getDiagnosticsFilename(sourceFile);
+
+  const cpp2Diagnostics = await parseCpp2Diagnostics(diagnosticsFile);
+  const cppDiagnostics = await parseCppDiagnostics(`${diagnosticsFile}.sarif`);
+  return combineDiagnostics(
+    document,
+    sourceFile,
+    cpp2Diagnostics,
+    cppDiagnostics
+  );
+}
+
+/**
+ * Augment our cpp2 diagnostics with the info results of the cpp compiler
+ */
+function combineDiagnostics(
+  document: TextDocument,
+  sourceFile: string,
+  cpp2Diagnostics: CppfrontResult,
+  cppDiagnostics: sarif.Log | null
+) {
+  if (!cppDiagnostics) return cpp2Diagnostics;
+  const source = document.getText();
+
+  // Loop through our cpp diagnostics and merge its errors with cpp2diagnostics
+  for (const d of cppDiagnostics.runs.flatMap((x) => x.results)) {
+    if (!d) continue;
+
+    const line = d.locations?.[0].physicalLocation?.region?.startLine;
+    const col = d.locations?.[0].physicalLocation?.region?.startColumn;
+    if (!line || !col) continue;
+
+    // Some hacky workaround to try and approximate where the errors really are
+    // in the cpp2 code.
+    //
+    const symbol = getSymbolTextAtPos(
+      { line: Math.max(0, line - 1), character: col },
+      source
+    );
+
+    // Finally, construct and push a new error to the set of cpp2 errors
+    //
+    cpp2Diagnostics.errors.push({
+      file: sourceFile,
+      msg: d.message.markdown ?? d.message.text ?? "",
+      symbol: symbol.symbol,
+      lineno: line,
+      colno: symbol.start == -1 ? col : symbol.start + 1,
+    });
+  }
+
+  return cpp2Diagnostics;
+}
+
 //----------------------//
 // Cppfront Diagnostics //
 //----------------------//
 
-export async function parseCpp2Diagnostics(diagnosticsFile: string) {
+async function parseCpp2Diagnostics(diagnosticsFile: string) {
   //
   const text = await fs.promises.readFile(diagnosticsFile);
   return tryParseDiagnostics(text.toString());
@@ -144,19 +206,19 @@ function tryParseDiagnostics(s: string): CppfrontResult {
 //-----------------//
 
 /**
- * Compile generated cpp code and get diagnostic results from it
+ * Compile generated cpp code and generate cpp diagnostics file
  */
-async function getCppDiagnostics(
+async function genCppDiagnostics(
   fn: string,
   cppfrontPath: string,
   compilerPath: string,
   cppfrontIncludePath: string | null,
   cpp: string
-) {
+): Promise<void> {
   //
   // Make sure we can compile our cpp file
   //
-  if (isStringEmpty(compilerPath)) return null;
+  if (isStringEmpty(compilerPath)) return;
   if (isStringEmpty(cppfrontIncludePath)) {
     cppfrontIncludePath = await searchForCppfrontInclude(cppfrontPath);
   }
@@ -164,8 +226,6 @@ async function getCppDiagnostics(
   // Compile the cpp file and get the diagnostics
   //
   await runCppCompiler(fn, compilerPath, cppfrontIncludePath!, cpp);
-
-  return parseCppDiagnostics(`${fn}.sarif`);
 }
 
 /**

@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { findSymbol, getSymbolTextAtPos } from "./definition";
-import { CppfrontSymbol } from "../diagnostics/diagnostics";
+import { getSymbolTextAtPos } from "./symbol";
 
 describe("Definition", () => {
   //
@@ -9,7 +8,7 @@ describe("Definition", () => {
     const pos = { line: 0, character: 0 };
     const text = "x is the best\nWe are hello\nfreddie is cool\nWasa wasa?";
 
-    const symbol = getSymbolTextAtPos(pos, text);
+    const symbol = getSymbolTextAtPos(pos, text).symbol;
     expect(symbol).to.equal("x");
   });
 
@@ -22,7 +21,7 @@ describe("Definition", () => {
     const text =
       "this x is the best\nWe are hello\nfreddie is cool\nWasa wasa?";
 
-    const symbol = getSymbolTextAtPos(pos, text);
+    const symbol = getSymbolTextAtPos(pos, text).symbol;
     expect(symbol).to.equal("x");
   });
 
@@ -32,7 +31,7 @@ describe("Definition", () => {
     const pos = { line: 1, character: 4 };
     const text = "We are hello\nfreddie is cool\nWasa wasa?";
 
-    const symbol = getSymbolTextAtPos(pos, text);
+    const symbol = getSymbolTextAtPos(pos, text).symbol;
     expect(symbol).to.equal("freddie");
   });
 
@@ -42,7 +41,7 @@ describe("Definition", () => {
     const pos = { line: 1, character: 6 };
     const text = "We are hello\nfreddie is cool\nWasa wasa?";
 
-    const symbol = getSymbolTextAtPos(pos, text);
+    const symbol = getSymbolTextAtPos(pos, text).symbol;
     expect(symbol).to.equal("freddie");
   });
 
@@ -52,7 +51,7 @@ describe("Definition", () => {
     const pos = { line: 1, character: 7 };
     const text = "We are hello\nfreddie is cool\nWasa wasa?";
 
-    const symbol = getSymbolTextAtPos(pos, text);
+    const symbol = getSymbolTextAtPos(pos, text).symbol;
     expect(symbol).to.equal("");
   });
 });
