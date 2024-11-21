@@ -19,12 +19,6 @@ let client: LanguageClient;
 const supposedDocuments: { scheme: string; language: string }[] = [
 	{ scheme: 'file', language: 'cpp2' },
 	{ scheme: 'file', language: 'h2' },
-	{ scheme: 'file', language: 'cpp' },
-	{ scheme: 'file', language: 'cxx' },
-	{ scheme: 'file', language: 'hpp' },
-	{ scheme: 'file', language: 'c' },
-	{ scheme: 'file', language: 'cc' },
-	{ scheme: 'file', language: 'h' },
 ];
 
 export function activate(context: ExtensionContext) {
