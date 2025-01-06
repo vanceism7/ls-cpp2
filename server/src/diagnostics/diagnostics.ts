@@ -17,6 +17,7 @@ import { getSymbolTextAtPos } from "../symbol/symbol";
 export type CppfrontResult = {
   symbols: CppfrontSymbol[];
   errors: CppfrontError[];
+  cppErrors: CppfrontError[];
   scopes: CppfrontScopes;
 };
 
@@ -124,6 +125,7 @@ function combineDiagnostics(
   const source = document.getText();
 
   // Loop through our cpp diagnostics and merge its errors with cpp2diagnostics
+  //
   for (const d of cppDiagnostics.runs.flatMap((x) => x.results)) {
     if (!d) continue;
 
@@ -141,7 +143,12 @@ function combineDiagnostics(
 
     // Finally, construct and push a new error to the set of cpp2 errors
     //
-    cpp2Diagnostics.errors.push({
+    // Note: We need to construct `cppErrors` before we start pushing to it.
+    // The other fields of CppFrontResult are parsed from json, but this one isn't, so
+    // it starts out initially as undefined
+    //
+    cpp2Diagnostics.cppErrors = [];
+    cpp2Diagnostics.cppErrors.push({
       file: sourceFile,
       msg: d.message.markdown ?? d.message.text ?? "",
       symbol: symbol.symbol,
@@ -197,7 +204,7 @@ function tryParseDiagnostics(s: string): CppfrontResult {
     return JSON.parse(s);
   } catch (err) {
     console.log("Error parsing json", s, err);
-    return { errors: [], symbols: [], scopes: {} };
+    return { errors: [], cppErrors: [], symbols: [], scopes: {} };
   }
 }
 
@@ -426,6 +433,38 @@ function inScope(pos: Position, scope: SourceRange): boolean {
     (line == scope.start.lineno && pos.character >= scope.start.colno) ||
     (line == scope.end.lineno && pos.character <= scope.end.colno)
   );
+}
+
+//-------------------------------//
+//-- Merge Diagnostics results --//
+//-------------------------------//
+/**
+ * Merge our cached diagnostics result with the freshly generated diagnostics
+ */
+export function mergeDiagnostics(
+  incoming: CppfrontResult,
+  cached: CppfrontResult | null | undefined
+): CppfrontResult {
+  //
+  // If we don't have a cache, return the new results
+  //
+  if (!cached) return incoming;
+
+  // Update our cached errors with the new errors
+  //
+  cached.errors = incoming.errors;
+  cached.cppErrors = incoming.cppErrors;
+
+  // Only update the cache's symbols and scope if `incoming` doesn't have errors
+  //
+  if (incoming.errors.length > 0) {
+    return cached;
+  }
+
+  cached.symbols = incoming.symbols;
+  cached.scopes = incoming.scopes;
+
+  return cached;
 }
 
 /**
