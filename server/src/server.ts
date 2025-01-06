@@ -27,6 +27,8 @@ import {
   getDiagnostics,
   getInScopeSymbols,
   getSymbolKind,
+  mergeDiagnostics,
+  type CppfrontResult,
 } from "./diagnostics/diagnostics";
 import { gotoDefinition } from "./definition";
 
@@ -40,6 +42,11 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+// Keep our diagnostics results in state so we can merge with new results
+// as the user updates the file
+//
+const compileDiagnostics: Map<string, CppfrontResult> = new Map();
 
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
@@ -152,6 +159,7 @@ function getDocumentSettings(resource: string): Thenable<Cpp2Settings> {
 // Only keep settings for open documents
 documents.onDidClose((e) => {
   cleanDiagnosticsFile(e.document);
+  compileDiagnostics.delete(e.document.uri);
   documentSettings.delete(e.document.uri);
 });
 
@@ -181,18 +189,31 @@ documents.onDidChangeContent((change) => {
 async function validateTextDocument(
   textDocument: TextDocument
 ): Promise<Diagnostic[]> {
+  //
   // In this simple example we get the settings for every validate run.
+  //
   const settings = await getDocumentSettings(textDocument.uri);
 
-  const result = await genDiagnostics(
+  let result = await genDiagnostics(
     settings.cppfrontPath,
     settings.cppfrontIncludePath,
     settings.cppCompilerPath,
     textDocument
   );
+
+  // Merge the diagnostic result with our cached diagnostics, then update the cache
+  //
+  result = mergeDiagnostics(result, compileDiagnostics.get(textDocument.uri));
+  compileDiagnostics.set(textDocument.uri, result);
+
+  // Convert our diagnostics errors into LSP's official error diagnostic type
+  // so the editor can display the error squigglies
+  //
   const diagnostics: Diagnostic[] = [];
 
-  for (const e of result.errors) {
+  for (const e of result.errors.concat(result.cppErrors)) {
+    if (!e) continue;
+
     const line = Math.max(e.lineno - 1, 0);
     const column = Math.max(e.colno - 1, 0);
     const length = Math.max(e.symbol.length, 1);
@@ -222,12 +243,13 @@ connection.onDidChangeWatchedFiles((_change) => {
 connection.onCompletion(
   async (pos: TextDocumentPositionParams): Promise<CompletionItem[]> => {
     //
-    const doc = documents.get(pos.textDocument.uri);
-    if (!doc) [];
-
-    const diagnostics = await getDiagnostics(doc!);
+    // Fetch our diagnostics from the document cache
+    //
+    const diagnostics = compileDiagnostics.get(pos.textDocument.uri);
+    if (!diagnostics) return [];
 
     // Get our in-scope symbols and transform them into a CompletionItem list
+    //
     return getInScopeSymbols(diagnostics, pos.position).map((d) => ({
       label: d.symbol,
       kind: getSymbolKind(d),
