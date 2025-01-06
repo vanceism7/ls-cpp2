@@ -12,6 +12,10 @@ export function getSymbolTextAtPos(
   const lines = text.split(/\r?\n/g);
   const lineText = lines[position.line];
 
+  // Guard against undefined errors
+  //
+  if (!lineText) return { symbol: "", start: -1 };
+
   // Find the beginning and end of the symbol/token we're on
   //
   // Note: we need to search one character further than where we're at, so we can
